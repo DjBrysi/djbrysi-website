@@ -21,3 +21,12 @@ function renderEvents(){const search=document.querySelector('#event-search').val
 async function loadEvents(){let manual=[];try{const response=await fetch('events.json',{cache:'no-store'});if(response.ok){const data=await response.json();manual=Array.isArray(data)?data:[]}}catch{}const today=new Date().toLocaleDateString('en-CA',{timeZone:'Europe/London'});allEvents=manual.filter(e=>e&&e.title&&e.date&&e.date>=today).sort((a,b)=>a.date.localeCompare(b.date));renderEvents()}
 for(const id of ['event-search','event-region','event-date'])document.getElementById(id).addEventListener('input',renderEvents);
 document.getElementById('event-reset').addEventListener('click',()=>{for(const id of ['event-search','event-region','event-date'])document.getElementById(id).value='';renderEvents()});loadEvents();
+
+
+// Highlight current section in the navigation (works on desktop and mobile).
+(()=>{const anchors=[...document.querySelectorAll('#navlinks a[href^="#"]')];if(!anchors.length)return;
+const mark=(hash)=>anchors.forEach(a=>{const active=a.getAttribute('href')===hash;a.classList.toggle('is-active',active);if(active)a.setAttribute('aria-current','location');else a.removeAttribute('aria-current');});
+mark(location.hash||'#home');window.addEventListener('hashchange',()=>mark(location.hash||'#home'));
+if('IntersectionObserver'in window){const sections=anchors.map(a=>document.querySelector(a.getAttribute('href'))).filter(Boolean);
+const observer=new IntersectionObserver(entries=>{const visible=entries.filter(e=>e.isIntersecting).sort((a,b)=>b.intersectionRatio-a.intersectionRatio);if(visible.length)mark('#'+visible[0].target.id)},{rootMargin:'-18% 0px -52% 0px',threshold:[0,.15,.4]});sections.forEach(s=>observer.observe(s));}
+})();
