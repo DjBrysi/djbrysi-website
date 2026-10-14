@@ -1,27 +1,61 @@
 const menu=document.querySelector('.menu');const links=document.querySelector('#navlinks');menu.addEventListener('click',()=>{const opened=links.classList.toggle('open');menu.setAttribute('aria-expanded',String(opened));});links.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{links.classList.remove('open');menu.setAttribute('aria-expanded','false')}));document.querySelector('#year').textContent=new Date().getFullYear();const dialog=document.querySelector('#tracklist-dialog');document.querySelector('#show-tracklist').addEventListener('click',()=>dialog.showModal());document.querySelector('#close-tracklist').addEventListener('click',()=>dialog.close());dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});
 
 
-// Events are loaded from events.json (independent promoters) and optional Ticketmaster feed.
+// UK trance events: local verified listings in events.json.
 const eventsList=document.querySelector('#events-list');
 const eventsStatus=document.querySelector('#events-status');
-let allEvents=[];
-let map=null,markers=null;
 const mapElement=document.querySelector('#events-map');
 const mapCaption=document.querySelector('.map-caption');
-mapElement.hidden=true;mapCaption.hidden=true;
+let allEvents=[],map=null,markers=null;
+const safeUrl=u=>{try{const v=new URL(u);return ['https:','http:'].includes(v.protocol)?v.href:null}catch{return null}};
 function ensureMap(){
   if(map||!window.L)return;
-  map=L.map(mapElement,{scrollWheelZoom:false}).setView([54.2,-3.0],5);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors',maxZoom:18}).addTo(map);
+  map=L.map(mapElement,{scrollWheelZoom:false,zoomControl:true,preferCanvas:true}).setView([54.4,-3.4],5);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>',
+    maxZoom:18
+  }).addTo(map);
   markers=L.featureGroup().addTo(map);
+  setTimeout(()=>map.invalidateSize(),100);
 }
-const safeUrl=u=>{try{const v=new URL(u);return ['https:','http:'].includes(v.protocol)?v.href:null}catch{return null}};
-function eventCard(e){const card=document.createElement('article');card.className='event-card';const h=document.createElement('h3');h.textContent=e.title;card.append(h);const p=document.createElement('p');p.textContent=[e.date,e.venue,e.city].filter(Boolean).join(' · ');card.append(p);if(e.lineup){const q=document.createElement('p');q.textContent='Lineup: '+e.lineup;card.append(q)}const links=document.createElement('div');const ticket=safeUrl(e.url);if(ticket){const a=document.createElement('a');a.href=ticket;a.target='_blank';a.rel='noopener noreferrer';a.textContent='EVENT / TICKETS ↗';links.append(a)}if(e.venue||e.city){const a=document.createElement('a');a.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent([e.venue,e.city].filter(Boolean).join(', '));a.target='_blank';a.rel='noopener noreferrer';a.textContent='DIRECTIONS ↗';links.append(a)}card.append(links);return card}
-function renderEvents(){const search=document.querySelector('#event-search').value.toLowerCase().trim(),region=document.querySelector('#event-region').value,date=document.querySelector('#event-date').value;const list=allEvents.filter(e=>(!search||[e.title,e.venue,e.city,e.lineup].join(' ').toLowerCase().includes(search))&&(!region||e.region===region)&&(!date||e.date>=date));eventsList.replaceChildren();const hasMappedEvents=list.some(e=>e.lat!=null&&e.lon!=null&&Number.isFinite(Number(e.lat))&&Number.isFinite(Number(e.lon)));mapElement.hidden=!hasMappedEvents;mapCaption.hidden=!hasMappedEvents;if(hasMappedEvents)ensureMap();if(markers)markers.clearLayers();for(const e of list){eventsList.append(eventCard(e));if(markers&&Number.isFinite(+e.lat)&&Number.isFinite(+e.lon)&&e.lat!==null&&e.lon!==null){const m=L.marker([+e.lat,+e.lon]).bindPopup(document.createTextNode(e.title+' — '+(e.venue||e.city||'')));markers.addLayer(m)}}eventsStatus.textContent=list.length?list.length+' upcoming event'+(list.length===1?'':'s')+' found.':'No matching confirmed events are listed yet. Try the event discovery links below.';if(map&&markers&&markers.getLayers().length){requestAnimationFrame(()=>{map.invalidateSize();map.fitBounds(markers.getBounds().pad(.2),{maxZoom:10})})}}
-async function loadEvents(){let manual=[];try{const response=await fetch('events.json',{cache:'no-store'});if(response.ok){const data=await response.json();manual=Array.isArray(data)?data:[]}}catch{}const today=new Date().toLocaleDateString('en-CA',{timeZone:'Europe/London'});allEvents=manual.filter(e=>e&&e.title&&e.date&&e.date>=today).sort((a,b)=>a.date.localeCompare(b.date));renderEvents()}
+function eventCoords(e){const lat=Number(e.lat),lon=Number(e.lon);return e.lat!==null&&e.lat!==undefined&&e.lat!==''&&e.lon!==null&&e.lon!==undefined&&e.lon!==''&&Number.isFinite(lat)&&Number.isFinite(lon)&&lat>=49.5&&lat<=61&&lon>=-9&&lon<=3?[lat,lon]:null}
+function eventCard(e){
+ const card=document.createElement('article');card.className='event-card';
+ const h=document.createElement('h3');h.textContent=e.title;card.append(h);
+ const p=document.createElement('p');p.textContent=[e.date,e.venue,e.city].filter(Boolean).join(' · ');card.append(p);
+ if(e.lineup){const q=document.createElement('p');q.textContent='Lineup: '+e.lineup;card.append(q)}
+ const links=document.createElement('div');const ticket=safeUrl(e.url);
+ if(ticket){const a=document.createElement('a');a.href=ticket;a.target='_blank';a.rel='noopener noreferrer';a.textContent='EVENT / TICKETS ↗';links.append(a)}
+ if(e.venue||e.city){const a=document.createElement('a');a.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent([e.venue,e.city].filter(Boolean).join(', '));a.target='_blank';a.rel='noopener noreferrer';a.textContent='DIRECTIONS ↗';links.append(a)}
+ card.append(links);return card;
+}
+function renderEvents(){
+ const search=document.querySelector('#event-search').value.toLowerCase().trim(),region=document.querySelector('#event-region').value,date=document.querySelector('#event-date').value;
+ const list=allEvents.filter(e=>(!search||[e.title,e.venue,e.city,e.lineup].join(' ').toLowerCase().includes(search))&&(!region||e.region===region)&&(!date||e.date>=date));
+ eventsList.replaceChildren();
+ for(const e of list)eventsList.append(eventCard(e));
+ eventsStatus.textContent=list.length?list.length+' upcoming event'+(list.length===1?'':'s')+' found.':'No confirmed upcoming events listed yet. Use the discovery links below while the automatic feed is being connected.';
+ if(!map)return;
+ markers.clearLayers();
+ for(const e of list){const coords=eventCoords(e);if(!coords)continue;
+   const popup=document.createElement('div');const title=document.createElement('strong');title.textContent=e.title;popup.append(title);
+   const details=document.createElement('p');details.textContent=[e.date,e.venue,e.city].filter(Boolean).join(' · ');popup.append(details);
+   const url=safeUrl(e.url);if(url){const link=document.createElement('a');link.href=url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Event / tickets ↗';popup.append(link)}
+   markers.addLayer(L.marker(coords).bindPopup(popup));
+ }
+ if(markers.getLayers().length){const bounds=markers.getBounds();if(markers.getLayers().length===1)map.setView(bounds.getCenter(),9);else map.fitBounds(bounds.pad(.22),{maxZoom:10});mapCaption.textContent='Select an event pin for details and ticket links.'}
+ else {map.setView([54.4,-3.4],5);mapCaption.textContent='UK venue map — event pins appear as verified listings are added.'}
+ setTimeout(()=>map.invalidateSize(),80);
+}
+async function loadEvents(){
+ let manual=[];try{const response=await fetch('events.json?v=20261014-7',{cache:'no-store'});if(response.ok){const data=await response.json();manual=Array.isArray(data)?data:[]}}catch{}
+ const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/London',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ allEvents=manual.filter(e=>e&&typeof e.title==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(e.date||'')&&e.date>=today).sort((a,b)=>a.date.localeCompare(b.date));renderEvents();
+}
 for(const id of ['event-search','event-region','event-date'])document.getElementById(id).addEventListener('input',renderEvents);
-document.getElementById('event-reset').addEventListener('click',()=>{for(const id of ['event-search','event-region','event-date'])document.getElementById(id).value='';renderEvents()});loadEvents();
-
+document.getElementById('event-reset').addEventListener('click',()=>{for(const id of ['event-search','event-region','event-date'])document.getElementById(id).value='';renderEvents()});
+function initEventsMap(){if(!window.L){mapCaption.textContent='Map temporarily unavailable. Event details and directions are still available below.';loadEvents();return;}ensureMap();loadEvents()}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initEventsMap);else initEventsMap();
 
 // Highlight current section in the navigation (works on desktop and mobile).
 (()=>{const anchors=[...document.querySelectorAll('#navlinks a[href^="#"]')];if(!anchors.length)return;

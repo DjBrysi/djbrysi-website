@@ -1,8 +1,16 @@
-DJ Brysi logo refresh – 14 October 2026
-Original Brysi lettering cropped from existing brysi-logo.png and converted to transparent PNG. No redesign.
-Desktop logo enlarged without changing nav height. Cache version updated to 20261014-3.
-Upload all files into GitHub repository root; no assets folder.
+DJ Brysi UK Trance Events Map Update — 14 October 2026
 
-October 14 update: Added 4 Friends of Brysi and 7 My Tracks SoundCloud embeds. All root-level files; no assets directory. CSS/JS/image query versions updated to 20261014-4. SoundCloud downloads are controlled by SoundCloud settings; no audio files are included.
+Upload all files into the GitHub repository root (no assets folder).
+This update keeps the approved site and improves the map display on mobile and desktop.
+The map is visible without events, and shows clickable pins for valid UK venue coordinates.
 
-2026-10-14: Added 4 O Clock in the Morning and updated four Grapey SoundCloud URLs; cache version 20261014-5.
+EVENTS DATA
+events.json is currently [] — no confirmed events have been provided.
+To add a verified event, create an entry with title, date (YYYY-MM-DD), venue, city, region, lat, lon, lineup, url.
+Example shape (illustrative only, NOT an actual event):
+{"title":"Example","date":"2026-12-31","venue":"Example Venue","city":"Manchester","region":"North England","lat":53.4808,"lon":-2.2426,"lineup":"","url":"https://example.com"}
+Do not publish example events as real listings.
+
+AUTOMATIC EVENT IMPORT
+Not yet connected. A reliable ticketing/events feed will need integration and potentially an API key.
+CSS/JS/events cache version: 20261014-7.
