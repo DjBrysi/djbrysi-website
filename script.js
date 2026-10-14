@@ -16,7 +16,9 @@ function ensureMap(){
     maxZoom:18
   }).addTo(map);
   markers=L.featureGroup().addTo(map);
-  setTimeout(()=>map.invalidateSize(),100);
+  setTimeout(()=>map.invalidateSize({pan:false}),250);
+  window.addEventListener("resize",()=>map.invalidateSize({pan:false}));
+  if("ResizeObserver" in window)new ResizeObserver(()=>map.invalidateSize({pan:false})).observe(mapElement);
 }
 function eventCoords(e){const lat=Number(e.lat),lon=Number(e.lon);return e.lat!==null&&e.lat!==undefined&&e.lat!==''&&e.lon!==null&&e.lon!==undefined&&e.lon!==''&&Number.isFinite(lat)&&Number.isFinite(lon)&&lat>=49.5&&lat<=61&&lon>=-9&&lon<=3?[lat,lon]:null}
 function eventCard(e){
@@ -46,7 +48,7 @@ function renderEvents(){
  }
  if(markers.getLayers().length){const bounds=markers.getBounds();if(markers.getLayers().length===1)map.setView(bounds.getCenter(),9);else map.fitBounds(bounds.pad(.22),{maxZoom:10});mapCaption.textContent='Select an event pin for details and ticket links.'}
  else {map.setView([54.4,-3.4],5);mapCaption.textContent='UK venue map — event pins appear as verified listings are added.'}
- setTimeout(()=>map.invalidateSize(),80);
+ requestAnimationFrame(()=>setTimeout(()=>map.invalidateSize({pan:false}),250));
 }
 async function loadEvents(){
  eventsStatus.textContent='Loading upcoming events from Skiddle…';
