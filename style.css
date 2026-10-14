@@ -117,3 +117,39 @@ html,body{max-width:100%;overflow-x:clip}
 /* v11: allow Leaflet to control tile positioning and transforms without overrides. */
 #events-map .leaflet-tile{width:256px;height:256px;max-width:none;max-height:none;object-fit:fill;}
 #events-map .leaflet-map-pane,#events-map .leaflet-tile-pane{transform-origin:0 0;}
+
+
+/* v12: Leaflet core layout fallback. These rules are required for tiles, pins,
+   and zoom controls to line up if the external Leaflet CSS is blocked. */
+#events-map.leaflet-container{position:relative;overflow:hidden;outline:0;touch-action:pan-x pan-y;background:#15101e}
+#events-map .leaflet-pane,#events-map .leaflet-tile,#events-map .leaflet-marker-icon,#events-map .leaflet-marker-shadow,#events-map .leaflet-tile-container,#events-map .leaflet-pane>svg,#events-map .leaflet-pane>canvas,#events-map .leaflet-zoom-box,#events-map .leaflet-image-layer,#events-map .leaflet-layer{position:absolute;left:0;top:0}
+#events-map .leaflet-pane{z-index:400}
+#events-map .leaflet-tile-pane{z-index:200}
+#events-map .leaflet-overlay-pane{z-index:400}
+#events-map .leaflet-shadow-pane{z-index:500}
+#events-map .leaflet-marker-pane{z-index:600}
+#events-map .leaflet-tooltip-pane{z-index:650}
+#events-map .leaflet-popup-pane{z-index:700}
+#events-map .leaflet-map-pane canvas{z-index:100}
+#events-map .leaflet-map-pane svg{z-index:200}
+#events-map .leaflet-tile{filter:inherit;visibility:inherit;image-rendering:auto;border:0;box-shadow:none}
+#events-map .leaflet-tile-container{pointer-events:none}
+#events-map .leaflet-marker-icon,#events-map .leaflet-marker-shadow{display:block}
+#events-map .leaflet-control{position:relative;z-index:800;pointer-events:auto;clear:both}
+#events-map .leaflet-top,#events-map .leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}
+#events-map .leaflet-top{top:0}#events-map .leaflet-bottom{bottom:0}
+#events-map .leaflet-left{left:0}#events-map .leaflet-right{right:0}
+#events-map .leaflet-left .leaflet-control{float:left}#events-map .leaflet-right .leaflet-control{float:right}
+#events-map .leaflet-top .leaflet-control{margin-top:10px}#events-map .leaflet-bottom .leaflet-control{margin-bottom:10px}
+#events-map .leaflet-left .leaflet-control{margin-left:10px}#events-map .leaflet-right .leaflet-control{margin-right:10px}
+#events-map .leaflet-control-zoom{border:2px solid #5558;border-radius:4px;overflow:hidden}
+#events-map .leaflet-control-zoom a{display:block;width:30px;height:30px;line-height:30px;text-align:center;background:#fff;color:#222;font:bold 22px/30px Arial,sans-serif;border-bottom:1px solid #ccc;text-decoration:none}
+#events-map .leaflet-control-attribution{background:#fffc;color:#333;font:11px/1.4 Arial,sans-serif;padding:1px 5px}
+#events-map .leaflet-control-attribution a{color:#0063a5}
+#events-map .leaflet-popup{position:absolute;text-align:center;margin-bottom:20px}
+#events-map .leaflet-popup-content-wrapper{background:white;color:#222;padding:12px;border-radius:8px;box-shadow:0 3px 14px #0005}
+#events-map .leaflet-popup-content{margin:0}
+#events-map .leaflet-popup-tip-container{position:absolute;left:50%;margin-left:-20px;width:40px;height:20px;overflow:hidden;pointer-events:none}
+#events-map .leaflet-popup-tip{width:17px;height:17px;background:white;transform:translate(11px,-10px) rotate(45deg);box-shadow:0 3px 14px #0005}
+#events-map .leaflet-popup-close-button{position:absolute;top:4px;right:5px;color:#555;z-index:1}
+#events-map .leaflet-zoom-animated{transform-origin:0 0}

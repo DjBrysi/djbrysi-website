@@ -1,5 +1,10 @@
-DJ Brysi event layout and map update (20261014-10)
-Upload all files/folders to GitHub repo root, preserving functions/api/skiddle.js.
-UK Events now last, 2 cards per row on desktop, 8 initially with Show More.
-Map initializes when near viewport, uses CARTO tiles with OpenStreetMap attribution.
-Cloudflare Pages secret SKIDDLE_API_KEY remains unchanged.
+DJ Brysi v12 - Leaflet map layout repair.
+
+Adds locally bundled Leaflet core CSS fallback for tile positioning, map controls and pins, so the map remains correctly laid out even if the external Leaflet CSS fails to load.
+
+Retains Skiddle API function, two-column events, show-more pagination, all other website sections and branding.
+
+Deploy all contents at repository root, retaining functions/api/skiddle.js.
+Visit https://djbrysi.co.uk/?v=20261014-12#events after deployment.
+
+Live browser rendering has not been verified.

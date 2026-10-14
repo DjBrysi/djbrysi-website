@@ -17,7 +17,7 @@ function ensureMap(){
     maxZoom:19,keepBuffer:2,updateWhenIdle:true
   }).addTo(map);
   markers=L.featureGroup().addTo(map);
-  setTimeout(()=>map.invalidateSize({pan:false}),250);
+  setTimeout(()=>map.invalidateSize({pan:false}),350);
   window.addEventListener("resize",()=>map.invalidateSize({pan:false}));
   if("ResizeObserver" in window)new ResizeObserver(()=>map.invalidateSize({pan:false})).observe(mapElement);
 }
