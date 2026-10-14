@@ -6,14 +6,15 @@ const eventsList=document.querySelector('#events-list');
 const eventsStatus=document.querySelector('#events-status');
 const mapElement=document.querySelector('#events-map');
 const mapCaption=document.querySelector('.map-caption');
-let allEvents=[],map=null,markers=null;
+let allEvents=[],map=null,markers=null,visibleEventCount=8;
+const moreEventsButton=document.querySelector('#events-more');
 const safeUrl=u=>{try{const v=new URL(u);return ['https:','http:'].includes(v.protocol)?v.href:null}catch{return null}};
 function ensureMap(){
   if(map||!window.L)return;
-  map=L.map(mapElement,{scrollWheelZoom:false,zoomControl:true,preferCanvas:true}).setView([54.4,-3.4],5);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>',
-    maxZoom:18
+  map=L.map(mapElement,{scrollWheelZoom:false,zoomControl:true,preferCanvas:true,fadeAnimation:false,zoomAnimation:false}).setView([54.4,-3.4],5);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>',
+    maxZoom:18,subdomains:'abcd',keepBuffer:4,updateWhenIdle:false
   }).addTo(map);
   markers=L.featureGroup().addTo(map);
   setTimeout(()=>map.invalidateSize({pan:false}),250);
@@ -36,7 +37,9 @@ function renderEvents(){
  const search=document.querySelector('#event-search').value.toLowerCase().trim(),region=document.querySelector('#event-region').value,date=document.querySelector('#event-date').value;
  const list=allEvents.filter(e=>(!search||[e.title,e.venue,e.city,e.lineup].join(' ').toLowerCase().includes(search))&&(!region||e.region===region)&&(!date||e.date>=date));
  eventsList.replaceChildren();
- for(const e of list)eventsList.append(eventCard(e));
+ for(const e of list.slice(0,visibleEventCount))eventsList.append(eventCard(e));
+ moreEventsButton.hidden=list.length<=visibleEventCount;
+ if(!moreEventsButton.hidden)moreEventsButton.textContent='SHOW MORE EVENTS ('+(list.length-visibleEventCount)+' REMAINING) ↓';
  eventsStatus.textContent=list.length?list.length+' upcoming Skiddle event'+(list.length===1?'':'s')+' found. Results may not include every UK trance night.':(allEvents.length?'No events match your filters.':'No upcoming Skiddle events found. Try again later or use the discovery links below.');
  if(!map)return;
  markers.clearLayers();
@@ -61,9 +64,18 @@ async function loadEvents(){
   renderEvents();
  }catch(err){allEvents=[];renderEvents();eventsStatus.textContent='Skiddle events could not be loaded right now. Please try again later or use the links below.';}
 }
-for(const id of ['event-search','event-region','event-date'])document.getElementById(id).addEventListener('input',renderEvents);
-document.getElementById('event-reset').addEventListener('click',()=>{for(const id of ['event-search','event-region','event-date'])document.getElementById(id).value='';renderEvents()});
-function initEventsMap(){if(!window.L){mapCaption.textContent='Map temporarily unavailable. Event details and directions are still available below.';loadEvents();return;}ensureMap();loadEvents()}
+moreEventsButton.addEventListener('click',()=>{visibleEventCount+=8;renderEvents()});
+for(const id of ['event-search','event-region','event-date'])document.getElementById(id).addEventListener('input',()=>{visibleEventCount=8;renderEvents()});
+document.getElementById('event-reset').addEventListener('click',()=>{for(const id of ['event-search','event-region','event-date'])document.getElementById(id).value='';visibleEventCount=8;renderEvents()});
+function initEventsMap(){
+ loadEvents();
+ if(!window.L){mapCaption.textContent='Map temporarily unavailable. Event details and directions are still available below.';return;}
+ const startMap=()=>{if(map)return;ensureMap();renderEvents();setTimeout(()=>map&&map.invalidateSize(true),350)};
+ if('IntersectionObserver' in window){
+  const observer=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting)){observer.disconnect();startMap()}},{rootMargin:'300px 0px'});
+  observer.observe(mapElement);
+ }else startMap();
+}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initEventsMap);else initEventsMap();
 
 // Highlight current section in the navigation (works on desktop and mobile).
