@@ -1,16 +1,14 @@
-DJ Brysi UK Trance Events Map Update — 14 October 2026
+DJ BRYSI — SKIDDLE LIVE EVENTS (20261014-8)
 
-Upload all files into the GitHub repository root (no assets folder).
-This update keeps the approved site and improves the map display on mobile and desktop.
-The map is visible without events, and shows clickable pins for valid UK venue coordinates.
+Upload the CONTENTS of this ZIP to the ROOT of your GitHub repository, preserving the functions/api/skiddle.js folder structure.
 
-EVENTS DATA
-events.json is currently [] — no confirmed events have been provided.
-To add a verified event, create an entry with title, date (YYYY-MM-DD), venue, city, region, lat, lon, lineup, url.
-Example shape (illustrative only, NOT an actual event):
-{"title":"Example","date":"2026-12-31","venue":"Example Venue","city":"Manchester","region":"North England","lat":53.4808,"lon":-2.2426,"lineup":"","url":"https://example.com"}
-Do not publish example events as real listings.
+Cloudflare Pages > Settings > Variables and Secrets > Production:
+SKIDDLE_API_KEY = your Skiddle API key (encrypted). Do not put the key in GitHub. Redeploy after setting the secret.
 
-AUTOMATIC EVENT IMPORT
-Not yet connected. A reliable ticketing/events feed will need integration and potentially an API key.
-CSS/JS/events cache version: 20261014-7.
+After Cloudflare deploys, test https://djbrysi.co.uk/api/skiddle (JSON should contain events) then https://djbrysi.co.uk/?v=20261014-8#events.
+
+Uses Skiddle official Events Search API, searches four trance-related keywords, up to 100 per query; this is not exhaustive UK coverage. Results are cached at Cloudflare for one hour. No live events were fetched during package creation; validate on deployment.
+
+If Cloudflare returns 404 for /api/skiddle, check that this is a Git-integrated Pages project and that functions/api/skiddle.js is in the repository root.
+
+Keep Skiddle attribution and links. Commercial use may require Skiddle written permission.

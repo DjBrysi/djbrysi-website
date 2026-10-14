@@ -1,7 +1,7 @@
 const menu=document.querySelector('.menu');const links=document.querySelector('#navlinks');menu.addEventListener('click',()=>{const opened=links.classList.toggle('open');menu.setAttribute('aria-expanded',String(opened));});links.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{links.classList.remove('open');menu.setAttribute('aria-expanded','false')}));document.querySelector('#year').textContent=new Date().getFullYear();const dialog=document.querySelector('#tracklist-dialog');document.querySelector('#show-tracklist').addEventListener('click',()=>dialog.showModal());document.querySelector('#close-tracklist').addEventListener('click',()=>dialog.close());dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});
 
 
-// UK trance events: local verified listings in events.json.
+// UK trance events: live Skiddle feed via a Cloudflare Pages Function.
 const eventsList=document.querySelector('#events-list');
 const eventsStatus=document.querySelector('#events-status');
 const mapElement=document.querySelector('#events-map');
@@ -23,18 +23,19 @@ function eventCard(e){
  const card=document.createElement('article');card.className='event-card';
  const h=document.createElement('h3');h.textContent=e.title;card.append(h);
  const p=document.createElement('p');p.textContent=[e.date,e.venue,e.city].filter(Boolean).join(' · ');card.append(p);
+ if(e.image){const img=document.createElement('img');img.className='event-poster';img.src=e.image;img.alt='Poster for '+e.title;img.loading='lazy';img.referrerPolicy='no-referrer';card.prepend(img)}
  if(e.lineup){const q=document.createElement('p');q.textContent='Lineup: '+e.lineup;card.append(q)}
  const links=document.createElement('div');const ticket=safeUrl(e.url);
  if(ticket){const a=document.createElement('a');a.href=ticket;a.target='_blank';a.rel='noopener noreferrer';a.textContent='EVENT / TICKETS ↗';links.append(a)}
  if(e.venue||e.city){const a=document.createElement('a');a.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent([e.venue,e.city].filter(Boolean).join(', '));a.target='_blank';a.rel='noopener noreferrer';a.textContent='DIRECTIONS ↗';links.append(a)}
- card.append(links);return card;
+ card.append(links);if(e.source==='Skiddle'){const credit=document.createElement('small');credit.className='event-credit';credit.textContent='Event information: Skiddle';card.append(credit)}return card;
 }
 function renderEvents(){
  const search=document.querySelector('#event-search').value.toLowerCase().trim(),region=document.querySelector('#event-region').value,date=document.querySelector('#event-date').value;
  const list=allEvents.filter(e=>(!search||[e.title,e.venue,e.city,e.lineup].join(' ').toLowerCase().includes(search))&&(!region||e.region===region)&&(!date||e.date>=date));
  eventsList.replaceChildren();
  for(const e of list)eventsList.append(eventCard(e));
- eventsStatus.textContent=list.length?list.length+' upcoming event'+(list.length===1?'':'s')+' found.':'No confirmed upcoming events listed yet. Use the discovery links below while the automatic feed is being connected.';
+ eventsStatus.textContent=list.length?list.length+' upcoming Skiddle event'+(list.length===1?'':'s')+' found. Results may not include every UK trance night.':(allEvents.length?'No events match your filters.':'No upcoming Skiddle events found. Try again later or use the discovery links below.');
  if(!map)return;
  markers.clearLayers();
  for(const e of list){const coords=eventCoords(e);if(!coords)continue;
@@ -48,9 +49,15 @@ function renderEvents(){
  setTimeout(()=>map.invalidateSize(),80);
 }
 async function loadEvents(){
- let manual=[];try{const response=await fetch('events.json?v=20261014-7',{cache:'no-store'});if(response.ok){const data=await response.json();manual=Array.isArray(data)?data:[]}}catch{}
- const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/London',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
- allEvents=manual.filter(e=>e&&typeof e.title==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(e.date||'')&&e.date>=today).sort((a,b)=>a.date.localeCompare(b.date));renderEvents();
+ eventsStatus.textContent='Loading upcoming events from Skiddle…';
+ try{
+  const response=await fetch('/api/skiddle',{cache:'default'});
+  const data=await response.json();
+  if(!response.ok)throw Error(data.error||'Event feed temporarily unavailable');
+  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/London',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  allEvents=(Array.isArray(data.events)?data.events:[]).filter(e=>e&&typeof e.title==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(e.date||'')&&e.date>=today).sort((a,b)=>a.date.localeCompare(b.date));
+  renderEvents();
+ }catch(err){allEvents=[];renderEvents();eventsStatus.textContent='Skiddle events could not be loaded right now. Please try again later or use the links below.';}
 }
 for(const id of ['event-search','event-region','event-date'])document.getElementById(id).addEventListener('input',renderEvents);
 document.getElementById('event-reset').addEventListener('click',()=>{for(const id of ['event-search','event-region','event-date'])document.getElementById(id).value='';renderEvents()});
