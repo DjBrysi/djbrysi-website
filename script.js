@@ -12,9 +12,9 @@ const safeUrl=u=>{try{const v=new URL(u);return ['https:','http:'].includes(v.pr
 function ensureMap(){
   if(map||!window.L)return;
   map=L.map(mapElement,{scrollWheelZoom:false,zoomControl:true,preferCanvas:true,fadeAnimation:false,zoomAnimation:false}).setView([54.4,-3.4],5);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
-    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>',
-    maxZoom:18,subdomains:'abcd',keepBuffer:4,updateWhenIdle:false
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
+    maxZoom:19,keepBuffer:2,updateWhenIdle:true
   }).addTo(map);
   markers=L.featureGroup().addTo(map);
   setTimeout(()=>map.invalidateSize({pan:false}),250);

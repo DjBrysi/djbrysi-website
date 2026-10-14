@@ -110,6 +110,10 @@ html,body{max-width:100%;overflow-x:clip}
 .events-more-wrap{text-align:center;margin:24px 0}
 #events-more[hidden]{display:none!important}
 #events-map{height:420px!important;min-height:420px;contain:none!important;isolation:auto!important}
-#events-map .leaflet-tile{width:256px!important;height:256px!important;max-width:none!important;max-height:none!important;visibility:visible!important;opacity:1}
-#events-map .leaflet-pane{transform-style:flat}
+
+
 @media(max-width:700px){.events-layout-stacked .events-list{grid-template-columns:minmax(0,1fr)}#events-map{height:340px!important;min-height:340px!important}}
+
+/* v11: allow Leaflet to control tile positioning and transforms without overrides. */
+#events-map .leaflet-tile{width:256px;height:256px;max-width:none;max-height:none;object-fit:fill;}
+#events-map .leaflet-map-pane,#events-map .leaflet-tile-pane{transform-origin:0 0;}
