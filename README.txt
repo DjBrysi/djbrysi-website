@@ -1,4 +1,4 @@
-DJ Brysi Navigation Refresh - 14 October 2026
-Upload all extracted files to the ROOT of GitHub repository DjBrysi/djbrysi-website (main branch). No assets folder.
-Changes: larger desktop logo/navigation, orange active link, purple hover states, wider banner, cache-versioned assets and stylesheet/script. Mobile layout retained.
-After Cloudflare deployment, open https://djbrysi.co.uk/?v=20261014-2
+DJ Brysi logo refresh – 14 October 2026
+Original Brysi lettering cropped from existing brysi-logo.png and converted to transparent PNG. No redesign.
+Desktop logo enlarged without changing nav height. Cache version updated to 20261014-3.
+Upload all files into GitHub repository root; no assets folder.
