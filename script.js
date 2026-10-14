@@ -92,3 +92,25 @@ mark(location.hash||'#home');window.addEventListener('hashchange',()=>mark(locat
 if('IntersectionObserver'in window){const sections=anchors.map(a=>document.querySelector(a.getAttribute('href'))).filter(Boolean);
 const observer=new IntersectionObserver(entries=>{const visible=entries.filter(e=>e.isIntersecting).sort((a,b)=>b.intersectionRatio-a.intersectionRatio);if(visible.length)mark('#'+visible[0].target.id)},{rootMargin:'-18% 0px -52% 0px',threshold:[0,.15,.4]});sections.forEach(s=>observer.observe(s));}
 })();
+
+// Resolve public SoundCloud profile images securely via our Pages Function.
+(function(){
+  const nodes = document.querySelectorAll('[data-soundcloud-profile]');
+  if (!nodes.length) return;
+  nodes.forEach(async (node) => {
+    try {
+      const profile = node.getAttribute('data-soundcloud-profile');
+      const response = await fetch('/api/soundcloud-avatar?url=' + encodeURIComponent(profile));
+      if (!response.ok) return;
+      const data = await response.json();
+      if (!data.image || !/^https:\/\//.test(data.image)) return;
+      const img = document.createElement('img');
+      img.alt = 'SoundCloud profile image';
+      img.loading = 'lazy';
+      img.referrerPolicy = 'no-referrer';
+      img.src = data.image;
+      img.onerror = () => img.remove();
+      node.appendChild(img);
+    } catch (_) { /* Keep initials as a graceful fallback */ }
+  });
+})();
