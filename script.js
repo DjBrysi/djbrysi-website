@@ -1,13 +1,20 @@
 const menu=document.querySelector('.menu');const links=document.querySelector('#navlinks');menu.addEventListener('click',()=>{const opened=links.classList.toggle('open');menu.setAttribute('aria-expanded',String(opened));});links.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{links.classList.remove('open');menu.setAttribute('aria-expanded','false')}));document.querySelector('#year').textContent=new Date().getFullYear();const dialog=document.querySelector('#tracklist-dialog');document.querySelector('#show-tracklist').addEventListener('click',()=>dialog.showModal());document.querySelector('#close-tracklist').addEventListener('click',()=>dialog.close());dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});
 
 
-// UK trance events: live Skiddle feed via a Cloudflare Pages Function.
+// UK trance and bounce events: live Skiddle feed via a Cloudflare Pages Function.
 const eventsList=document.querySelector('#events-list');
 const eventsStatus=document.querySelector('#events-status');
 const mapElement=document.querySelector('#events-map');
 const mapCaption=document.querySelector('.map-caption');
 let allEvents=[],map=null,markers=null,visibleEventCount=8;
 const moreEventsButton=document.querySelector('#events-more');
+// Explicit Leaflet marker images: avoid broken relative asset paths on Cloudflare Pages.
+const brysiEventMarker=L.icon({
+  iconUrl:'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  iconRetinaUrl:'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  shadowUrl:'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize:[25,41],iconAnchor:[12,41],popupAnchor:[1,-34],shadowSize:[41,41]
+});
 const safeUrl=u=>{try{const v=new URL(u);return ['https:','http:'].includes(v.protocol)?v.href:null}catch{return null}};
 function ensureMap(){
   if(map||!window.L)return;
@@ -24,7 +31,7 @@ function ensureMap(){
 function eventCoords(e){const lat=Number(e.lat),lon=Number(e.lon);return e.lat!==null&&e.lat!==undefined&&e.lat!==''&&e.lon!==null&&e.lon!==undefined&&e.lon!==''&&Number.isFinite(lat)&&Number.isFinite(lon)&&lat>=49.5&&lat<=61&&lon>=-9&&lon<=3?[lat,lon]:null}
 function eventCard(e){
  const card=document.createElement('article');card.className='event-card';
- const h=document.createElement('h3');h.textContent=e.title;card.append(h);
+ const h=document.createElement('h3');h.textContent=e.title;card.append(h);if(e.genre){const badge=document.createElement('span');badge.className='event-genre-badge';badge.textContent=e.genre;card.append(badge)}
  const p=document.createElement('p');p.textContent=[e.date,e.venue,e.city].filter(Boolean).join(' · ');card.append(p);
  if(e.image){const img=document.createElement('img');img.className='event-poster';img.src=e.image;img.alt='Poster for '+e.title;img.loading='lazy';img.referrerPolicy='no-referrer';card.prepend(img)}
  if(e.lineup){const q=document.createElement('p');q.textContent='Lineup: '+e.lineup;card.append(q)}
@@ -34,20 +41,20 @@ function eventCard(e){
  card.append(links);if(e.source==='Skiddle'){const credit=document.createElement('small');credit.className='event-credit';credit.textContent='Event information: Skiddle';card.append(credit)}return card;
 }
 function renderEvents(){
- const search=document.querySelector('#event-search').value.toLowerCase().trim(),region=document.querySelector('#event-region').value,date=document.querySelector('#event-date').value;
- const list=allEvents.filter(e=>(!search||[e.title,e.venue,e.city,e.lineup].join(' ').toLowerCase().includes(search))&&(!region||e.region===region)&&(!date||e.date>=date));
+ const search=document.querySelector('#event-search').value.toLowerCase().trim(),region=document.querySelector('#event-region').value,date=document.querySelector('#event-date').value,genre=document.querySelector('#event-genre').value;
+ const list=allEvents.filter(e=>(!search||[e.title,e.venue,e.city,e.lineup,e.genre].join(' ').toLowerCase().includes(search))&&(!region||e.region===region)&&(!date||e.date>=date)&&(!genre||e.genre===genre));
  eventsList.replaceChildren();
  for(const e of list.slice(0,visibleEventCount))eventsList.append(eventCard(e));
  moreEventsButton.hidden=list.length<=visibleEventCount;
  if(!moreEventsButton.hidden)moreEventsButton.textContent='SHOW MORE EVENTS ('+(list.length-visibleEventCount)+' REMAINING) ↓';
- eventsStatus.textContent=list.length?list.length+' upcoming Skiddle event'+(list.length===1?'':'s')+' found. Results may not include every UK trance night.':(allEvents.length?'No events match your filters.':'No upcoming Skiddle events found. Try again later or use the discovery links below.');
+ eventsStatus.textContent=list.length?list.length+' upcoming Skiddle event'+(list.length===1?'':'s')+' found. Results may not include every UK trance or bounce night.':(allEvents.length?'No events match your filters.':'No upcoming Skiddle events found. Try again later or use the discovery links below.');
  if(!map)return;
  markers.clearLayers();
  for(const e of list){const coords=eventCoords(e);if(!coords)continue;
    const popup=document.createElement('div');const title=document.createElement('strong');title.textContent=e.title;popup.append(title);
    const details=document.createElement('p');details.textContent=[e.date,e.venue,e.city].filter(Boolean).join(' · ');popup.append(details);
    const url=safeUrl(e.url);if(url){const link=document.createElement('a');link.href=url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Event / tickets ↗';popup.append(link)}
-   markers.addLayer(L.marker(coords).bindPopup(popup));
+   markers.addLayer(L.marker(coords,{icon:brysiEventMarker}).bindPopup(popup));
  }
  if(markers.getLayers().length){const bounds=markers.getBounds();if(markers.getLayers().length===1)map.setView(bounds.getCenter(),9);else map.fitBounds(bounds.pad(.22),{maxZoom:10});mapCaption.textContent='Select an event pin for details and ticket links.'}
  else {map.setView([54.4,-3.4],5);mapCaption.textContent='UK venue map — event pins appear as verified listings are added.'}
@@ -65,8 +72,8 @@ async function loadEvents(){
  }catch(err){allEvents=[];renderEvents();eventsStatus.textContent='Skiddle events could not be loaded right now. Please try again later or use the links below.';}
 }
 moreEventsButton.addEventListener('click',()=>{visibleEventCount+=8;renderEvents()});
-for(const id of ['event-search','event-region','event-date'])document.getElementById(id).addEventListener('input',()=>{visibleEventCount=8;renderEvents()});
-document.getElementById('event-reset').addEventListener('click',()=>{for(const id of ['event-search','event-region','event-date'])document.getElementById(id).value='';visibleEventCount=8;renderEvents()});
+for(const id of ['event-search','event-region','event-date','event-genre'])document.getElementById(id).addEventListener('input',()=>{visibleEventCount=8;renderEvents()});
+document.getElementById('event-reset').addEventListener('click',()=>{for(const id of ['event-search','event-region','event-date','event-genre'])document.getElementById(id).value='';visibleEventCount=8;renderEvents()});
 function initEventsMap(){
  loadEvents();
  if(!window.L){mapCaption.textContent='Map temporarily unavailable. Event details and directions are still available below.';return;}

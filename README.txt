@@ -1,10 +1,9 @@
-DJ Brysi v12 - Leaflet map layout repair.
+DJ Brysi v14 - Combined UK Trance & Bounce Events.
 
-Adds locally bundled Leaflet core CSS fallback for tile positioning, map controls and pins, so the map remains correctly laid out even if the external Leaflet CSS fails to load.
+Added Skiddle bounce/donk/scouse-house searches, genre classification and an All Events / Trance / Bounce filter. The filter applies to both the map pins and event cards. The existing v12 map layout and v13 marker repair are preserved.
 
-Retains Skiddle API function, two-column events, show-more pagination, all other website sections and branding.
+Deploy all files at the repository root, retaining functions/api/skiddle.js. SKIDDLE_API_KEY remains configured as a Cloudflare Pages secret.
 
-Deploy all contents at repository root, retaining functions/api/skiddle.js.
-Visit https://djbrysi.co.uk/?v=20261014-12#events after deployment.
+After deployment visit https://djbrysi.co.uk/?v=20261014-14#events
 
-Live browser rendering has not been verified.
+API results are cached for up to an hour; live event coverage and genre classification may be incomplete.
