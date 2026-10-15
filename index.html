@@ -38,11 +38,11 @@
 <section class="section live-section" id="live">
 <div class="section-heading"><p class="eyebrow">01 / TUNE IN</p><h2>THE LIVE <em>EXPERIENCE.</em></h2><p>Catch the next set on Twitch. High energy, huge tunes and good company.</p></div>
 <div class="live-grid">
-<div class="stream-wrap"><iframe allowfullscreen="" loading="lazy" src="https://player.twitch.tv/?channel=brysi84&amp;parent=djbrysi.co.uk&amp;parent=www.djbrysi.co.uk" title="Brysi Twitch livestream"></iframe></div>
+<div class="stream-wrap"><iframe allowfullscreen="" loading="lazy" src="about:blank" data-twitch-channel="brysi84" title="Brysi Twitch livestream"></iframe></div>
 <div class="live-side">
 <img alt="Brysi live DJ set artwork" loading="lazy" src="live.png?v=20261014-15"/>
 <a class="btn primary" href="https://www.twitch.tv/brysi84" rel="noopener noreferrer" target="_blank">OPEN TWITCH ↗</a>
-<small>Live player works on djbrysi.co.uk. If offline, visit Twitch for past broadcasts.</small>
+<small>Watch here when live, or open Twitch for past broadcasts.</small>
 </div>
 </div>
 </section>
@@ -83,5 +83,13 @@
 <dialog id="tracklist-dialog"><button aria-label="Close tracklist" id="close-tracklist" type="button">✕</button><img alt="Full Put Me in a Trance tracklist" src="tracklist.png?v=20261014-15"/></dialog>
 <script crossorigin="" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="script.js?v=20261014-15"></script>
+<script>
+(function () {
+  const player = document.querySelector('iframe[data-twitch-channel]');
+  if (!player) return;
+  const params = new URLSearchParams({channel: player.dataset.twitchChannel, parent: window.location.hostname, autoplay: 'false'});
+  player.src = 'https://player.twitch.tv/?' + params.toString();
+})();
+</script>
 </body>
 </html>
