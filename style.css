@@ -161,9 +161,10 @@ html,body{max-width:100%;overflow-x:clip}
 .friend-avatar-photo { position:relative; overflow:hidden; isolation:isolate; }
 
 /* =========================================
-   DJ BRYSI v2.2 - TWITCH PLAYER ASPECT RATIO
-   Keep equal-height columns without stretching
-   or cropping the embedded Twitch player.
+   DJ BRYSI v2.2 - TWITCH PLAYER SIZING
+   Match the height of the Live Hub column.
+   Twitch may crop its internal offline artwork
+   when the player is taller than 16:9.
    ========================================= */
 @media (min-width: 901px) {
   #live .live-grid {
@@ -175,10 +176,8 @@ html,body{max-width:100%;overflow-x:clip}
   }
 
   #live .stream-wrap {
+    position: relative;
     aspect-ratio: auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     min-width: 0;
     min-height: 0;
     overflow: hidden;
@@ -186,12 +185,13 @@ html,body{max-width:100%;overflow-x:clip}
   }
 
   #live .stream-wrap iframe {
+    position: absolute;
+    inset: 0;
     display: block;
     width: 100%;
-    height: auto;
-    aspect-ratio: 16 / 9;
+    height: 100%;
     min-height: 0;
-    flex: 0 0 auto;
+    aspect-ratio: auto;
     border: 0;
   }
 
