@@ -1,97 +1,170 @@
 
-const TWITCH_CHANNEL = "brysi84";
+/*
+ * DJ Brysi v2.2 - Cached Twitch Status API
+ * Cloudflare Pages Function
+ */
 
-export async function onRequestGet({ env }) {
-  const headers = {
-    "Content-Type": "application/json",
-    "Cache-Control": "no-store",
-  };
+const CHANNEL = "brysi84";
+const STATUS_CACHE_SECONDS = 45;
+const TOKEN_SAFETY_SECONDS = 300;
 
-  const reply = (data, status = 200) =>
-    new Response(JSON.stringify(data), {
-      status,
-      headers,
-    });
+const json = (data, status = 200) =>
+  new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store"
+    }
+  });
+
+export async function onRequestGet({ env, request }) {
+  const clientId = env.TWITCH_CLIENT_ID;
+  const clientSecret = env.TWITCH_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    return json({
+      error: "Twitch credentials are not configured"
+    }, 503);
+  }
 
   try {
-    if (!env.TWITCH_CLIENT_ID || !env.TWITCH_CLIENT_SECRET) {
-      return reply(
-        { error: "Twitch API credentials are not configured" },
-        503
-      );
-    }
+    const cache = caches.default;
 
-    // Request an application access token from Twitch.
-    const tokenResponse = await fetch(
-      "https://id.twitch.tv/oauth2/token",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          client_id: env.TWITCH_CLIENT_ID,
-          client_secret: env.TWITCH_CLIENT_SECRET,
-          grant_type: "client_credentials",
-        }),
-      }
+    // Separate cache entries for Preview and Production.
+    const baseUrl = new URL(request.url);
+    const statusKey = new Request(
+      `${baseUrl.origin}/__cache/twitch-status-v2`
     );
 
-    if (!tokenResponse.ok) {
-      return reply(
-        { error: "Twitch authentication failed" },
-        502
+    const cachedStatus = await cache.match(statusKey);
+
+    if (cachedStatus) {
+      return json(await cachedStatus.json());
+    }
+
+    // Cache the application access token.
+    const tokenKey = new Request(
+      `${baseUrl.origin}/__cache/twitch-app-token-v2`
+    );
+
+    let tokenData;
+    const cachedToken = await cache.match(tokenKey);
+
+    if (cachedToken) {
+      tokenData = await cachedToken.json();
+    } else {
+      const tokenResponse = await fetch(
+        "https://id.twitch.tv/oauth2/token",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/x-www-form-urlencoded"
+          },
+          body: new URLSearchParams({
+            client_id: clientId,
+            client_secret: clientSecret,
+            grant_type: "client_credentials"
+          })
+        }
+      );
+
+      if (!tokenResponse.ok) {
+        console.error(
+          "Twitch token request failed:",
+          tokenResponse.status
+        );
+
+        return json({
+          error: "Twitch authentication failed"
+        }, 502);
+      }
+
+      tokenData = await tokenResponse.json();
+
+      if (!tokenData.access_token) {
+        return json({
+          error: "Twitch returned no access token"
+        }, 502);
+      }
+
+      const tokenTtl = Math.max(
+        1,
+        Math.floor(tokenData.expires_in || 3600) -
+          TOKEN_SAFETY_SECONDS
+      );
+
+      await cache.put(
+        tokenKey,
+        new Response(JSON.stringify(tokenData), {
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": `public, max-age=${tokenTtl}`
+          }
+        })
       );
     }
 
-    const tokenData = await tokenResponse.json();
-
-    // Check whether Brysi is currently live.
+    // Fetch the current stream information.
     const streamResponse = await fetch(
-      `https://api.twitch.tv/helix/streams?user_login=${TWITCH_CHANNEL}`,
+      `https://api.twitch.tv/helix/streams?user_login=${CHANNEL}`,
       {
         headers: {
-          "Client-ID": env.TWITCH_CLIENT_ID,
-          Authorization: `Bearer ${tokenData.access_token}`,
-        },
+          "Client-ID": clientId,
+          Authorization: `Bearer ${tokenData.access_token}`
+        }
       }
     );
 
     if (!streamResponse.ok) {
-      return reply(
-        { error: "Unable to retrieve Twitch stream status" },
-        502
+      console.error(
+        "Twitch stream request failed:",
+        streamResponse.status
       );
+
+      return json({
+        error: "Unable to retrieve Twitch stream status"
+      }, 502);
     }
 
     const streamData = await streamResponse.json();
     const stream = streamData.data?.[0];
 
-    if (!stream) {
-      return reply({
-        channel: TWITCH_CHANNEL,
-        live: false,
-        status: "offline",
-        url: `https://www.twitch.tv/${TWITCH_CHANNEL}`,
-      });
-    }
+    const result = stream
+      ? {
+          channel: CHANNEL,
+          live: true,
+          status: "live",
+          title: stream.title,
+          game: stream.game_name,
+          viewers: stream.viewer_count,
+          started_at: stream.started_at,
+          url: `https://www.twitch.tv/${CHANNEL}`
+        }
+      : {
+          channel: CHANNEL,
+          live: false,
+          status: "offline",
+          url: `https://www.twitch.tv/${CHANNEL}`
+        };
 
-    return reply({
-      channel: TWITCH_CHANNEL,
-      live: true,
-      status: "live",
-      title: stream.title,
-      game: stream.game_name,
-      viewers: stream.viewer_count,
-      started_at: stream.started_at,
-      url: `https://www.twitch.tv/${TWITCH_CHANNEL}`,
-    });
-  } catch (error) {
-    console.error("Twitch status error:", error);
-
-    return reply(
-      { error: "Twitch status temporarily unavailable" },
-      502
+    await cache.put(
+      statusKey,
+      new Response(JSON.stringify(result), {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control":
+            `public, max-age=${STATUS_CACHE_SECONDS}`
+        }
+      })
     );
+
+    return json(result);
+  } catch (error) {
+    console.error("DJ Brysi Twitch API:", error);
+
+    return json({
+      error: "Twitch status temporarily unavailable"
+    }, 502);
   }
 }
