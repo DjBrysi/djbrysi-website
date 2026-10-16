@@ -161,11 +161,11 @@ html,body{max-width:100%;overflow-x:clip}
 .friend-avatar-photo { position:relative; overflow:hidden; isolation:isolate; }
 
 /* =========================================
-   DJ BRYSI v2.2 - MATCH LIVE HUB HEIGHTS
+   DJ BRYSI v2.2 - TWITCH PLAYER ASPECT RATIO
+   Keep equal-height columns without stretching
+   or cropping the embedded Twitch player.
    ========================================= */
-
 @media (min-width: 901px) {
-
   #live .live-grid {
     align-items: stretch;
   }
@@ -174,22 +174,37 @@ html,body{max-width:100%;overflow-x:clip}
     min-width: 0;
   }
 
+  #live .stream-wrap {
+    aspect-ratio: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: #090710;
+  }
+
+  #live .stream-wrap iframe {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    min-height: 0;
+    flex: 0 0 auto;
+    border: 0;
+  }
+
   #live .live-side {
     display: flex;
     flex-direction: column;
+    min-width: 0;
   }
 
   #live .brysi-hub {
     height: 100%;
     justify-content: space-between;
   }
-
-  #live .live-grid iframe {
-    width: 100%;
-    height: 100%;
-    min-height: 600px;
-  }
-
 }
 
 .friend-avatar-photo img { display:block; position:absolute; inset:0; width:100%; height:100%; object-fit:cover; border-radius:inherit; z-index:1; }
