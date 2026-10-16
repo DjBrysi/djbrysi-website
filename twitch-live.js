@@ -1,47 +1,67 @@
 
-/* DJ Brysi v2.2 - Twitch Live Hub */
-(() => {
-  const CHANNEL = "brysi84";
-  const TWITCH_URL = `https://www.twitch.tv/${CHANNEL}`;
+/*
+ * DJ BRYSI - LIVE EXPERIENCE v2.2
+ *
+ * Twitch live/offline detection
+ * Random livestream announcements
+ * Automatic countdown
+ * Previous Twitch broadcasts
+ *
+ * Schedule: /stream-schedule.json
+ * Twitch API: /api/twitch-status
+ */
 
-  // Set a date when your next livestream is confirmed.
-  // Example: "2026-10-24T20:00:00+01:00"
-  // Leave blank to show "To be announced".
-  const NEXT_STREAM = "";
+(() => {
+  "use strict";
+
+  const TWITCH_URL = "https://www.twitch.tv/brysi84";
+  const SCHEDULE_URL = "/stream-schedule.json";
+  const STATUS_URL = "/api/twitch-status";
+
+  const STATUS_REFRESH_MS = 60000;
+  const SCHEDULE_REFRESH_MS = 300000;
 
   const side = document.querySelector("#live .live-side");
-  if (!side) return;
 
-  const css = document.createElement("style");
-  css.textContent = `
-    .brysi-live-hub {
-      color: #fff;
+  if (!side) {
+    console.warn("DJ Brysi: Live Hub container not found.");
+    return;
+  }
+
+  // ------------------------------------------
+  // STYLES
+  // ------------------------------------------
+
+  const style = document.createElement("style");
+  style.textContent = `
+    .brysi-hub {
       display: flex;
       flex-direction: column;
       gap: 20px;
+      color: #ffffff;
     }
 
-    .brysi-live-card {
+    .brysi-hub-card {
       background: linear-gradient(
         135deg,
-        rgba(107, 33, 168, .25),
-        rgba(17, 10, 28, .95)
+        rgba(105, 35, 150, 0.24),
+        rgba(22, 10, 35, 0.96)
       );
-      border: 1px solid rgba(168, 85, 247, .45);
-      border-radius: 14px;
+      border: 1px solid rgba(175, 75, 245, 0.45);
+      border-radius: 15px;
       padding: 20px;
     }
 
-    .brysi-live-label {
-      color: #c9a7e8;
+    .brysi-hub-label {
       font-size: 12px;
       font-weight: 800;
       letter-spacing: 1.5px;
+      color: #cba9e9;
       text-transform: uppercase;
       margin-bottom: 12px;
     }
 
-    .brysi-live-status {
+    .brysi-hub-status {
       display: flex;
       align-items: center;
       gap: 10px;
@@ -49,299 +69,494 @@
       font-weight: 900;
     }
 
-    .brysi-live-dot {
+    .brysi-hub-dot {
       width: 12px;
       height: 12px;
-      border-radius: 50%;
-      background: #a78bba;
       flex-shrink: 0;
+      border-radius: 50%;
+      background: #a68db5;
     }
 
-    .brysi-live-hub[data-state="live"]
-    .brysi-live-dot {
-      background: #ff435e;
-      box-shadow: 0 0 12px #ff435e;
-      animation: brysi-live-pulse 1.6s infinite;
+    .brysi-hub[data-status="live"] .brysi-hub-dot {
+      background: #ff365f;
+      box-shadow: 0 0 15px #ff365f;
+      animation: brysi-live-pulse 1.5s infinite;
     }
 
     @keyframes brysi-live-pulse {
-      50% { opacity: .4; }
+      50% { opacity: 0.35; }
     }
 
-    .brysi-live-detail {
-      color: #d6c8e0;
+    .brysi-hub-detail {
+      color: #d5c4e0;
       font-size: 14px;
       line-height: 1.6;
       margin: 12px 0 0;
       overflow-wrap: anywhere;
     }
 
-    .brysi-live-value {
+    .brysi-hub-title {
+      color: #ffffff;
       font-size: 20px;
-      font-weight: 800;
-      color: #fff;
+      font-weight: 900;
       margin: 0 0 8px;
+      overflow-wrap: anywhere;
+    }
+
+    .brysi-hub-date {
+      color: #ff963f;
+      font-size: 14px;
+      font-weight: 800;
+      margin: 8px 0;
     }
 
     .brysi-countdown {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 8px;
-      margin-top: 15px;
+      margin-top: 18px;
     }
 
-    .brysi-countdown-unit {
-      background: rgba(168, 85, 247, .13);
-      border: 1px solid rgba(168, 85, 247, .25);
+    .brysi-countdown-box {
+      background: rgba(166, 65, 230, 0.15);
+      border: 1px solid rgba(166, 65, 230, 0.3);
       border-radius: 9px;
       text-align: center;
-      padding: 10px 3px;
+      padding: 11px 4px;
     }
 
     .brysi-countdown-number {
       display: block;
-      font-size: 21px;
+      color: #ff9139;
+      font-size: 22px;
       font-weight: 900;
-      color: #ff8a35;
     }
 
-    .brysi-countdown-name {
+    .brysi-countdown-label {
       display: block;
+      color: #d8bde9;
       font-size: 10px;
-      color: #d3bde3;
       text-transform: uppercase;
+      margin-top: 3px;
     }
 
     .brysi-hub-link {
-      display: block;
-      padding: 14px;
-      background: linear-gradient(
-        90deg, #9218fa, #e827b9
-      );
-      color: #fff !important;
-      text-align: center;
+      color: #ff963f;
+      font-size: 13px;
+      font-weight: 800;
       text-decoration: none;
+    }
+
+    .brysi-hub-button {
+      display: block;
+      padding: 15px;
+      border-radius: 6px;
+      background: linear-gradient(
+        90deg,
+        #9115fa,
+        #e825b9
+      );
+      color: #ffffff !important;
+      text-decoration: none;
+      text-align: center;
       font-size: 13px;
       font-weight: 900;
       letter-spacing: 1px;
-      border-radius: 5px;
     }
 
-    .brysi-hub-secondary {
-      color: #ff963f;
-      text-decoration: none;
-      font-weight: 800;
-      font-size: 13px;
-    }
-
-    .brysi-live-hub .brysi-hub-link:hover {
+    .brysi-hub-button:hover {
       filter: brightness(1.15);
     }
 
     @media (max-width: 600px) {
-      .brysi-live-card { padding: 15px; }
-      .brysi-countdown-number { font-size: 17px; }
+      .brysi-hub-card {
+        padding: 15px;
+      }
+
+      .brysi-countdown-number {
+        font-size: 17px;
+      }
     }
   `;
-  document.head.appendChild(css);
 
-  // Replace only the right-hand Twitch panel contents.
-  side.replaceChildren();
+  document.head.appendChild(style);
 
-  const hub = document.createElement("div");
-  hub.className = "brysi-live-hub";
-  hub.dataset.state = "checking";
+  // ------------------------------------------
+  // LIVE HUB HTML
+  // ------------------------------------------
 
-  hub.innerHTML = `
-    <div class="brysi-live-card">
-      <div class="brysi-live-label">Stream status</div>
-      <div class="brysi-live-status" role="status"
-           aria-live="polite">
-        <span class="brysi-live-dot"></span>
-        <span id="brysi-status-text">CHECKING...</span>
+  side.innerHTML = `
+    <div class="brysi-hub" data-status="checking">
+
+      <div class="brysi-hub-card">
+        <div class="brysi-hub-label">
+          Stream Status
+        </div>
+
+        <div class="brysi-hub-status"
+             role="status"
+             aria-live="polite">
+          <span class="brysi-hub-dot"></span>
+          <span id="brysi-status">
+            CHECKING TWITCH...
+          </span>
+        </div>
+
+        <p class="brysi-hub-detail"
+           id="brysi-status-detail">
+          Connecting to Twitch...
+        </p>
       </div>
-      <p class="brysi-live-detail"
-         id="brysi-stream-detail">
-        Connecting to Twitch...
-      </p>
-    </div>
 
-    <div class="brysi-live-card">
-      <div class="brysi-live-label">Next livestream</div>
-      <p class="brysi-live-value"
-         id="brysi-next-stream">
-        To be announced
-      </p>
-      <div id="brysi-countdown-container"></div>
-    </div>
+      <div class="brysi-hub-card">
+        <div class="brysi-hub-label">
+          Next Livestream
+        </div>
 
-    <div class="brysi-live-card">
-      <div class="brysi-live-label">Previous broadcasts</div>
-      <p class="brysi-live-detail">
-        Missed a set? Catch up on previous
-        livestreams on Twitch.
-      </p>
-      <a class="brysi-hub-secondary"
-         href="https://www.twitch.tv/brysi84/videos?filter=archives&sort=time"
+        <div class="brysi-hub-title"
+             id="brysi-next-title">
+          Checking schedule...
+        </div>
+
+        <div class="brysi-hub-date"
+             id="brysi-next-date"></div>
+
+        <p class="brysi-hub-detail"
+           id="brysi-next-description"></p>
+
+        <div id="brysi-countdown-container"></div>
+      </div>
+
+      <div class="brysi-hub-card">
+        <div class="brysi-hub-label">
+          Previous Broadcasts
+        </div>
+
+        <p class="brysi-hub-detail">
+          Missed a set? Catch up on previous
+          livestreams on Twitch.
+        </p>
+
+        <a class="brysi-hub-link"
+           href="https://www.twitch.tv/brysi84/videos?filter=archives&sort=time"
+           target="_blank"
+           rel="noopener noreferrer">
+          VIEW PAST BROADCASTS ↗
+        </a>
+      </div>
+
+      <a class="brysi-hub-button"
+         id="brysi-twitch-button"
+         href="${TWITCH_URL}"
          target="_blank"
          rel="noopener noreferrer">
-        VIEW PAST BROADCASTS ↗
+        OPEN TWITCH ↗
       </a>
-    </div>
 
-    <a class="brysi-hub-link"
-       href="${TWITCH_URL}"
-       target="_blank"
-       rel="noopener noreferrer"
-       id="brysi-watch-button">
-      OPEN TWITCH ↗
-    </a>
+    </div>
   `;
 
-  side.appendChild(hub);
+  // ------------------------------------------
+  // ELEMENTS
+  // ------------------------------------------
 
-  const statusText = hub.querySelector("#brysi-status-text");
-  const detail = hub.querySelector("#brysi-stream-detail");
-  const watchButton = hub.querySelector("#brysi-watch-button");
-  const nextText = hub.querySelector("#brysi-next-stream");
-  const countdownBox = hub.querySelector(
+  const hub = side.querySelector(".brysi-hub");
+
+  const statusElement = side.querySelector("#brysi-status");
+  const statusDetail = side.querySelector(
+    "#brysi-status-detail"
+  );
+
+  const nextTitle = side.querySelector("#brysi-next-title");
+  const nextDate = side.querySelector("#brysi-next-date");
+  const nextDescription = side.querySelector(
+    "#brysi-next-description"
+  );
+
+  const countdownContainer = side.querySelector(
     "#brysi-countdown-container"
   );
 
-  let previousState = "";
+  const twitchButton = side.querySelector(
+    "#brysi-twitch-button"
+  );
 
-  async function updateTwitch() {
+  let nextStream = null;
+  let lastKnownStatus = null;
+
+  // ------------------------------------------
+  // TWITCH STATUS
+  // ------------------------------------------
+
+  async function updateTwitchStatus() {
     try {
-      const response = await fetch("/api/twitch-status", {
+      const response = await fetch(STATUS_URL, {
         cache: "no-store"
       });
 
       if (!response.ok) {
-        throw new Error(`Twitch API returned ${response.status}`);
+        throw new Error(
+          "Twitch API returned " + response.status
+        );
       }
 
       const data = await response.json();
 
       if (typeof data.live !== "boolean") {
-        throw new Error("Invalid Twitch response");
+        throw new Error("Invalid Twitch API response");
       }
 
-      if (data.live) {
-        hub.dataset.state = "live";
-        statusText.textContent = "BRYSI IS LIVE NOW!";
-        watchButton.textContent = "WATCH LIVE ↗";
+      lastKnownStatus = data;
 
-        const title = data.title || "DJ Brysi is streaming";
-        const viewers = Number.isFinite(data.viewers)
-          ? ` · ${data.viewers.toLocaleString()} watching`
-          : "";
+      renderTwitchStatus(data);
 
-        detail.textContent = title + viewers;
-        previousState = "live";
-      } else {
-        hub.dataset.state = "offline";
-        statusText.textContent = "BRYSI IS OFFLINE";
-        detail.textContent =
-          "Not streaming right now. Check back for the next set!";
-        watchButton.textContent = "OPEN TWITCH ↗";
-        previousState = "offline";
-      }
     } catch (error) {
-      console.warn("DJ Brysi Twitch status:", error);
+      console.warn("DJ Brysi Twitch:", error);
 
-      if (previousState) {
-        detail.textContent =
+      if (lastKnownStatus) {
+        renderTwitchStatus(lastKnownStatus);
+        statusDetail.textContent =
           "Unable to refresh. Showing last known status.";
-        return;
+      } else {
+        hub.dataset.status = "unknown";
+        statusElement.textContent = "STATUS UNAVAILABLE";
+        statusDetail.textContent =
+          "Twitch status could not be checked. Open Twitch directly.";
       }
-
-      hub.dataset.state = "unknown";
-      statusText.textContent = "STATUS UNAVAILABLE";
-      detail.textContent =
-        "Twitch status could not be checked. Open Twitch directly.";
     }
   }
 
-  function updateCountdown() {
-    if (!NEXT_STREAM) {
-      nextText.textContent = "To be announced";
-      countdownBox.replaceChildren();
+  function renderTwitchStatus(data) {
+    if (data.live) {
+      hub.dataset.status = "live";
+
+      statusElement.textContent = "BRYSI IS LIVE NOW!";
+
+      twitchButton.textContent = "WATCH LIVE ↗";
+
+      const viewers = Number.isFinite(data.viewers)
+        ? " · " + data.viewers.toLocaleString() +
+          " watching"
+        : "";
+
+      statusDetail.textContent =
+        (data.title || "DJ Brysi is streaming!") +
+        viewers;
+
+    } else {
+      hub.dataset.status = "offline";
+
+      statusElement.textContent = "BRYSI IS OFFLINE";
+
+      statusDetail.textContent =
+        "Not streaming right now. Check back for the next set!";
+
+      twitchButton.textContent = "OPEN TWITCH ↗";
+    }
+  }
+
+  // ------------------------------------------
+  // STREAM SCHEDULE
+  // ------------------------------------------
+
+  function findNextStream(data) {
+    if (!data || !Array.isArray(data.upcoming)) {
+      throw new Error("Invalid schedule format");
+    }
+
+    const now = Date.now();
+
+    const upcoming = data.upcoming
+      .filter(stream => {
+        if (!stream || typeof stream.date !== "string") {
+          return false;
+        }
+
+        // Dates must include UK offset or UTC Z.
+        if (!/(Z|[+-]\d{2}:\d{2})$/.test(stream.date)) {
+          return false;
+        }
+
+        const timestamp = Date.parse(stream.date);
+
+        return Number.isFinite(timestamp) &&
+          timestamp > now;
+      })
+      .sort((a, b) =>
+        Date.parse(a.date) - Date.parse(b.date)
+      );
+
+    return upcoming[0] || null;
+  }
+
+  async function updateSchedule() {
+    try {
+      const response = await fetch(SCHEDULE_URL, {
+        cache: "no-store"
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          "Schedule returned " + response.status
+        );
+      }
+
+      const data = await response.json();
+
+      nextStream = findNextStream(data);
+
+      renderSchedule();
+
+    } catch (error) {
+      console.warn("DJ Brysi Schedule:", error);
+
+      nextStream = null;
+
+      nextTitle.textContent = "Schedule unavailable";
+      nextDate.textContent = "";
+      nextDescription.textContent =
+        "Please check back for the next announcement.";
+
+      countdownContainer.replaceChildren();
+    }
+  }
+
+  function renderSchedule() {
+    if (!nextStream) {
+      nextTitle.textContent = "To be announced";
+      nextDate.textContent = "";
+      nextDescription.textContent =
+        "Keep an eye out for the next Brysi livestream!";
+
+      countdownContainer.replaceChildren();
       return;
     }
 
-    const target = new Date(NEXT_STREAM);
-    if (Number.isNaN(target.getTime())) {
-      nextText.textContent = "Schedule unavailable";
-      countdownBox.replaceChildren();
-      return;
-    }
+    const streamDate = new Date(nextStream.date);
 
-    nextText.textContent = target.toLocaleString("en-GB", {
-      timeZone: "Europe/London",
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZoneName: "short"
-    });
+    nextTitle.textContent =
+      nextStream.title || "DJ Brysi Live";
 
-    const remaining = target.getTime() - Date.now();
+    nextDate.textContent =
+      streamDate.toLocaleString("en-GB", {
+        timeZone: "Europe/London",
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZoneName: "short"
+      });
+
+    nextDescription.textContent =
+      nextStream.description || "";
+
+    renderCountdown();
+  }
+
+  // ------------------------------------------
+  // COUNTDOWN
+  // ------------------------------------------
+
+  function renderCountdown() {
+    if (!nextStream) return;
+
+    const target = Date.parse(nextStream.date);
+    const remaining = target - Date.now();
 
     if (remaining <= 0) {
-      countdownBox.textContent =
-        "Scheduled start time reached — check Twitch!";
+      nextStream = null;
+      updateSchedule();
       return;
     }
 
-    const days = Math.floor(remaining / 86400000);
+    const days = Math.floor(
+      remaining / 86400000
+    );
+
     const hours = Math.floor(
       (remaining % 86400000) / 3600000
     );
+
     const minutes = Math.floor(
       (remaining % 3600000) / 60000
     );
+
     const seconds = Math.floor(
       (remaining % 60000) / 1000
     );
 
-    const units = [
+    const values = [
       ["Days", days],
       ["Hours", hours],
       ["Mins", minutes],
       ["Secs", seconds]
     ];
 
-    countdownBox.innerHTML =
-      '<div class="brysi-countdown">' +
-      units.map(([name, value]) => `
-        <div class="brysi-countdown-unit">
-          <span class="brysi-countdown-number">
-            ${String(value).padStart(2, "0")}
-          </span>
-          <span class="brysi-countdown-name">
-            ${name}
-          </span>
-        </div>
-      `).join("") +
-      "</div>";
+    countdownContainer.replaceChildren();
+
+    const countdown = document.createElement("div");
+    countdown.className = "brysi-countdown";
+
+    values.forEach(([label, value]) => {
+      const box = document.createElement("div");
+      box.className = "brysi-countdown-box";
+
+      const number = document.createElement("span");
+      number.className = "brysi-countdown-number";
+      number.textContent =
+        String(value).padStart(2, "0");
+
+      const caption = document.createElement("span");
+      caption.className = "brysi-countdown-label";
+      caption.textContent = label;
+
+      box.append(number, caption);
+      countdown.appendChild(box);
+    });
+
+    countdownContainer.appendChild(countdown);
   }
 
-  updateTwitch();
-  updateCountdown();
+  // ------------------------------------------
+  // INITIAL LOAD
+  // ------------------------------------------
 
-  setInterval(() => {
-    if (!document.hidden) updateTwitch();
-  }, 60000);
+  updateTwitchStatus();
+  updateSchedule();
 
+  // Refresh Twitch status every minute.
   setInterval(() => {
-    if (!document.hidden) updateCountdown();
+    if (!document.hidden) {
+      updateTwitchStatus();
+    }
+  }, STATUS_REFRESH_MS);
+
+  // Refresh stream schedule every 5 minutes.
+  setInterval(() => {
+    if (!document.hidden) {
+      updateSchedule();
+    }
+  }, SCHEDULE_REFRESH_MS);
+
+  // Update countdown every second.
+  setInterval(() => {
+    if (!document.hidden && nextStream) {
+      renderCountdown();
+    }
   }, 1000);
 
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) {
-      updateTwitch();
-      updateCountdown();
+  // Refresh when returning to the browser tab.
+  document.addEventListener(
+    "visibilitychange",
+    () => {
+      if (!document.hidden) {
+        updateTwitchStatus();
+        updateSchedule();
+      }
     }
-  });
+  );
+
+  console.log("DJ Brysi Live Experience v2.2 loaded");
 })();
