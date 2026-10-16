@@ -159,5 +159,80 @@ html,body{max-width:100%;overflow-x:clip}
 
 /* Friends of Brysi: official SoundCloud profile imagery */
 .friend-avatar-photo { position:relative; overflow:hidden; isolation:isolate; }
+
+/* =========================================
+   DJ BRYSI v2.2 - COMPACT LIVE HUB
+   Preserve Twitch's native 16:9 presentation;
+   reduce right-hand card spacing to match it.
+   ========================================= */
+@media (min-width: 901px) {
+  #live .live-grid {
+    align-items: start;
+  }
+  #live .live-grid > * {
+    min-width: 0;
+  }
+  #live .stream-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    min-height: 0;
+    overflow: hidden;
+    background: #090710;
+  }
+  #live .stream-wrap iframe {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    border: 0;
+  }
+  #live .live-side {
+    min-width: 0;
+    padding: 10px;
+    gap: 0;
+  }
+  #live .brysi-hub {
+    height: auto;
+    gap: 10px;
+    justify-content: flex-start;
+  }
+  #live .brysi-hub-card {
+    padding: 12px 15px;
+  }
+  #live .brysi-hub-label {
+    margin-bottom: 6px;
+  }
+  #live .brysi-hub-status {
+    font-size: 17px;
+  }
+  #live .brysi-hub-title {
+    font-size: 18px;
+    margin-bottom: 4px;
+  }
+  #live .brysi-hub-date {
+    margin: 5px 0;
+  }
+  #live .brysi-hub-detail {
+    margin-top: 6px;
+    line-height: 1.4;
+  }
+  #live .brysi-countdown {
+    margin-top: 9px;
+    gap: 7px;
+  }
+  #live .brysi-countdown-box {
+    padding: 7px 3px;
+  }
+  #live .brysi-countdown-number {
+    font-size: 20px;
+  }
+  #live .brysi-hub-button {
+    padding: 12px;
+  }
+}
+
 .friend-avatar-photo img { display:block; position:absolute; inset:0; width:100%; height:100%; object-fit:cover; border-radius:inherit; z-index:1; }
 .friend-avatar-photo span { position:relative; z-index:0; }
